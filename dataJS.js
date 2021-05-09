@@ -1,3 +1,5 @@
+let { io } = require('./server.js')
+
 class Rooms {
 	constructor() {
 		this.rooms = {}
@@ -8,7 +10,7 @@ class Rooms {
 	}
 	
 	createNewRoomWith(roomName) {
-		this.rooms[roomName] = new Room(roomName)
+		return this.rooms[roomName] = new Room(roomName)
 	}
 	
 	deleteRoomWith(roomName) {
@@ -48,6 +50,7 @@ class Room {
 	constructor(name) {
 		this.players = {}
 		this.name = name
+		this.admin = undefined
 		this.state = 'lobby' // lobby, prompt, wait, draw, wait-finish, guess, finish
 	}
 	
@@ -80,6 +83,38 @@ class Room {
 		})
 		return total
 	}
+	
+	hasConnectionPlayers() {
+		return this.getConnectedPlayerCount() !== 0
+	}
+	
+	assignAdmin() {
+		if (this.hasConnectionPlayers()) {
+			this.admin = this.getPlayerNames()[0]
+			let adminPlayer = this.getPlayerWith(this.admin)
+			io.to(adminPlayer.id).emit('admin')
+		} else {
+			this.admin = undefined
+		}
+	}
+	
+	adminIs(playerName) {
+		return this.admin === playerName
+	}
+	
+	goToNextState() {
+		this.state = {
+			lobby: 'prompt',
+			prompt: 'draw',
+			draw: 'guess',
+			guess: 'draw',
+			finished: 'finished'
+		}[this.state]
+	}
+	
+	finishGame() {
+		this.state = 'finished'
+	}
 }
 
 class Player {
@@ -87,6 +122,7 @@ class Player {
 		this.id = id
 		this.name = name
 		this.isConnected = true
+		this.isReady = true
 	}
 	
 	get isDisconnected() {

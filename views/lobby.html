@@ -1,0 +1,12 @@
+<h1 class='box green'>{{roomName}} lobby</h1>
+<button class='box button blue admin' id='start'>Start</button>
+<button class='box button red' id='exit'>Leave</button>
+<ul class='box'>{{playerList}}</ul>
+<script>
+document.getElementById('start').addEventListener('click', (event) => {
+    socket.emit('next stage')
+})
+document.getElementById('exit').addEventListener('click', (event) => {
+    window.location.href = '/'
+})
+</script>

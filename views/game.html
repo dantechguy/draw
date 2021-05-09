@@ -15,16 +15,15 @@
 const socket = io()
 const [ roomName, playerName ] = window.location.pathname.split('/').slice(2,4)
 const uiElement = document.getElementById('ui')
+let amAdmin = false
 
 socket.emit('join', { roomName, playerName })
 
-socket.on('update ui', (data) => {
-    uiElement.innerHTML = data
-})
+socket.on('update ui', (data) => uiElement.innerHTML=data )
 
-socket.on('failed to join room', (data) => {
-    window.location.href = '/?err=' + data
-})
+socket.on('failed to join room', (data) => window.location.href='/?err='+data )
+
+socket.on('admin', (data) => amAdmin=true)
     </script>
 </body>
 </html>

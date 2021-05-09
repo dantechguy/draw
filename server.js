@@ -1,17 +1,13 @@
 // SETUP DATA STORAGE
-
-const { rooms, idLookup } = require('./roomJS.js')
-
-
-// SETUP LOGS
-
 const { log, logs} = require('./log.js')
-
-
-// EXPRESS SETUP
-
 const express = require('express')
 const app = express()
+const server = app.listen(process.env.PORT || 3000)
+const io = require("socket.io")(server)
+module.exports = { io }
+const { rooms, idLookup } = require('./dataJS.js')
+
+
 
 app.use(express.static('public'))
 
@@ -46,26 +42,27 @@ app.get('*', (request, response) => {
 	response.sendFile(__dirname + '/views/404.html')
 })
   
-let server = app.listen(process.env.PORT || 3000)
 
 
-// SOCKET.IO SETUP
 
-const io = require("socket.io")(server)
+
 
 io.on('connection', (socket) => {
 	socket.on('join', (data) => {
 		let { roomName, playerName } = data
 		if (rooms.checkRoomNameValid(roomName) && rooms.checkPlayerNameValid(playerName)) {
-			if (!rooms.hasRoomWith(roomName)) 
-				rooms.createNewRoomWith(roomName);
+			if (!rooms.hasRoomWith(roomName)) {
+				rooms.createNewRoomWith(roomName)
+				log(`+ ${roomName}`)
+			}
 			let room = rooms.getRoomWith(roomName)
 			if (room.state === 'lobby') {
 				if (!room.hasPlayerWith(playerName)) {
 					room.createNewPlayerWith(playerName, socket.id)
+					if (room.getConnectedPlayerCount() === 1)
+						room.assignAdmin();
 					socket.emit('update ui', '<button class="box blue button">hi</button')
 					// TODO: replace above with UI refresh socket message
-					log(`+ ${roomName}`)
 					log(`+ ${playerName}[${roomName}]`)
 				} else {
 					socket.emit('failed to join room', 'Name taken')
@@ -78,6 +75,8 @@ io.on('connection', (socket) => {
 						player.id = socket.id
 						player.isConnected = true
 						socket.emit('joined room')
+						if (room.adminIs(playerName))
+							socket.emit('admin');
 						// TODO: replace above with UI refresh socket message
 						log(`+ ${playerName}[${roomName}]`)
 					} else {
@@ -93,6 +92,7 @@ io.on('connection', (socket) => {
 			socket.emit('failed to join room', 'Invalid room or player name')
 			log(`x bad room or name`)
 		}
+		log(JSON.stringify(rooms))
 	})
 	
 	socket.on('disconnect', (data) => {
@@ -103,6 +103,7 @@ io.on('connection', (socket) => {
 				if (room.hasPlayerWith(playerName)) {
 					if (room.state === 'lobby') {
 						room.deletePlayerWith(playerName)
+						room.assignAdmin()
 					} else {
 						let player = room.getPlayerWith(playerName)
 						player.id = undefined
@@ -128,6 +129,7 @@ io.on('connection', (socket) => {
 			// can happen if name taken
 			log(`???`)
         }
+		log(JSON.stringify(rooms))
 	})
 })
 
