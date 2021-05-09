@@ -1,0 +1,13 @@
+{
+  "name": "dans-draw",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "author": "Dan W-B",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "nodemon": "^2.0.7",
+    "socket.io": "^4.0.2"
+  }
+}

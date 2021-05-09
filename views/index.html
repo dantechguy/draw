@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/style.css">
+	<link rel="preconnect" href="https://fonts.gstatic.com">
+	<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;400;700&display=swap" rel="stylesheet">
+	<title>Dan's Draw!</title>
+</head>
+<body class='green'>
+	<div class='box white'>
+		<h1 class='box green'>Welcome to Dan's Draw!</h1>
+		<div class='box red hidden' id='error'></div>
+		<br>
+		<div>Your name! Make it unique to the room.</div>
+		<input id='name-input' class='box white' type="text" maxlength="10" placeholder="Name">
+		<br>
+		<br>
+		<div>The room name. Type in something new to start a new room!</div>
+		<input id='room-input' class='box white' type="text" maxlength="10" placeholder="Room">
+		<button id='go' class='box blue button'>GO GO GO!</button>
+	</div>
+	<script>
+let errorBox = document.getElementById('error')
+function setError(error) {
+	if (error) {
+		errorBox.textContent = error
+		errorBox.classList.remove('hidden')
+	} else {
+		errorBox.classList.add('hidden')
+	}
+}
+setError(new URL(window.location.href).searchParams.get('err'))
+
+
+let checkTimeoutId;
+let checkTimeoutDelay = 1000;
+function checkNameAndRoomWithServer() {
+	fetch('/join/' + roomInput.value)
+		.then(res => res.json())
+		.then(res => {
+			if (res.started) {
+				setError('This room has already started')
+			} else if (res.players.includes(nameInput.value)) {
+				setError('This name has been taken')
+			} else {
+				setError('')
+				goButton.disabled = false
+			}
+		})
+}
+
+const nameInput = document.getElementById('name-input')
+nameInput.addEventListener("input", () => updatedInput(nameInput));
+
+const roomInput = document.getElementById('room-input')
+roomInput.addEventListener("input", () => updatedInput(roomInput));
+
+function updatedInput(input) {
+	goButton.disabled = true
+	input.value = input.value
+	.replace(" ", "-")
+	.toLowerCase()
+	.replace(/[^a-z-]/g, "")
+	
+	if (roomInput.value && nameInput.value) {
+		clearTimeout(checkTimeoutId)
+		checkTimeoutId = setTimeout(checkNameAndRoomWithServer, checkTimeoutDelay)
+	}
+}
+
+document.body.addEventListener('keydown', (event) => {
+	if (event.code === 'Enter') {
+		goButton.click()
+	}
+})
+
+const goButton = document.getElementById('go')
+goButton.disabled = true
+goButton.addEventListener('click', (event) => {
+	window.location.href = `/game/${roomInput.value}/${nameInput.value}`
+})
+	</script>
+</body>
+</html>
