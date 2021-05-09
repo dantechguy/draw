@@ -16,8 +16,6 @@ class Rooms {
 	deleteRoomWith(roomName) {
 		let room = this.getRoomWith(roomName)
 		room.getPlayerNames().forEach((playerName) => {
-			let id = room.getPlayerWith(playerName).id
-			idLookup.removeId(id)
 			room.deletePlayerWith(playerName)
 		})
 		delete this.rooms[roomName]
@@ -64,7 +62,6 @@ class Room {
 	
 	createNewPlayerWith(playerName, id) {
 		this.players[playerName] = new Player(id, playerName)
-		idLookup.addId(id, this.name, playerName)
 	}
 	
 	deletePlayerWith(playerName) {
@@ -134,32 +131,5 @@ class Player {
 	}
 }
 
-
-class IdLookup {
-    constructor() {
-        this.ids = {}
-    }
-    
-    addId(id, roomName, playerName) {
-        this.ids[id] = {
-            roomName: roomName,
-            name: playerName,
-        }
-    }
-	
-	removeId(id) {
-		delete this.ids[id]
-	}
-	
-	has(id) {
-		return this.ids.hasOwnProperty(id)
-	}
-	
-	lookup(id) {
-		return this.ids[id]
-	}
-}
-
 const rooms = new Rooms()
-const idLookup = new IdLookup()
-module.exports = { rooms, idLookup }
+module.exports = { rooms }

@@ -5,7 +5,8 @@ const app = express()
 const server = app.listen(process.env.PORT || 3000)
 const io = require("socket.io")(server)
 module.exports = { io }
-const { rooms, idLookup } = require('./dataJS.js')
+const { rooms } = require('./dataJS.js')
+const { generateUI } = require('./ui.js')
 
 
 
@@ -48,47 +49,60 @@ app.get('*', (request, response) => {
 
 
 io.on('connection', (socket) => {
+	log('socket connected')
+	let roomName, playerName;
+	
 	socket.on('join', (data) => {
-		let { roomName, playerName } = data
-		if (rooms.checkRoomNameValid(roomName) && rooms.checkPlayerNameValid(playerName)) {
-			if (!rooms.hasRoomWith(roomName)) {
-				rooms.createNewRoomWith(roomName)
+		// `data` should have `{ roomName, playerName}`
+		if (rooms.checkRoomNameValid(data.roomName) && rooms.checkPlayerNameValid(data.playerName)) {
+			if (!rooms.hasRoomWith(data.roomName)) {
+				// SUCCESS: NEW ROOM AND PLAYER
+				({ roomName, playerName } = data)
+				let room = rooms.createNewRoomWith(roomName)
+				room.createNewPlayerWith(playerName, socket.id)
+				room.assignAdmin();
+				socket.emit('update ui', generateUI(roomName, playerName))
 				log(`+ ${roomName}`)
-			}
-			let room = rooms.getRoomWith(roomName)
-			if (room.state === 'lobby') {
-				if (!room.hasPlayerWith(playerName)) {
-					room.createNewPlayerWith(playerName, socket.id)
-					if (room.getConnectedPlayerCount() === 1)
-						room.assignAdmin();
-					socket.emit('update ui', '<button class="box blue button">hi</button')
-					// TODO: replace above with UI refresh socket message
+				log(`+ ${playerName}[${roomName}]`)
+			} else if (room.state === 'lobby') {
+				let room = rooms.getRoomWith(data.roomName)
+				if (!room.hasPlayerWith(data.playerName)) {
+					// SUCCESS: NEW PLAYER JOINS ROOM
+					({ roomName, playerName } = data)
+					room.createNewPlayerWith(playerName, socket.id)						
+					socket.emit('update ui', generateUI(roomName, playerName))
 					log(`+ ${playerName}[${roomName}]`)
 				} else {
+					// FAILURE: NAME ALREADY TAKEN IN LOBBY
 					socket.emit('failed to join room', 'Name taken')
 					log(`x ${playerName}[${roomName}] name taken`)
 				}
 			} else {
-				if (room.hasPlayerWith(playerName)) {
-					let player = room.getPlayerWith(playerName)
+				let room = rooms.getRoomWith(data.roomName)
+				if (room.hasPlayerWith(data.playerName)) {
+					let player = room.getPlayerWith(data.playerName)
 					if (player.isDisconnected) {
+						// SUCCESS: PLAYER RETURNS TO ROOM
+						({ roomName, playerName } = data)
 						player.id = socket.id
 						player.isConnected = true
-						socket.emit('joined room')
+						socket.emit('update ui', generateUI(roomName, playerName))
 						if (room.adminIs(playerName))
 							socket.emit('admin');
-						// TODO: replace above with UI refresh socket message
 						log(`+ ${playerName}[${roomName}]`)
 					} else {
+						// FAILURE: PLAYER IS ALREADY CONNECTED IN ROOM
 						socket.emit('failed to join room', 'Player already connected')
 						log(`x ${playerName}[${roomName}] already connected`)
 					}
 				} else {
+					// FAILURE: NEW NAME IN ROOM THAT HAS STARTED
 					socket.emit('failed to join room', 'Room already started')
 					log(`x ${playerName}[${roomName}] room already started`)
 				}
 			}
 		} else {
+			// FAILURE: BAD ROOM OR PLAYER NAME
 			socket.emit('failed to join room', 'Invalid room or player name')
 			log(`x bad room or name`)
 		}
@@ -96,8 +110,7 @@ io.on('connection', (socket) => {
 	})
 	
 	socket.on('disconnect', (data) => {
-		if (idLookup.has(socket.id)) {
-			let { roomName, name: playerName } = idLookup.lookup(socket.id)
+		if (typeof roomName !== 'undefined') {
 			if (rooms.hasRoomWith(roomName)) {
 				let room = rooms.getRoomWith(roomName)
 				if (room.hasPlayerWith(playerName)) {
@@ -109,27 +122,33 @@ io.on('connection', (socket) => {
 						player.id = undefined
 						player.isConnected = false
 					}
-					idLookup.removeId(socket.id)
 					log(`- ${playerName}[${roomName}]`)
 					if (room.getConnectedPlayerCount() === 0) {
 						rooms.deleteRoomWith(roomName)
 						log(`- ${roomName}`)
 					}
-					
 				} else {
 					// phantom disconnection
-					log(`? ${playerName}[${roomName}]`)
+					// socket's player would have to be deleted while the socket was still connected
+					log(`??? SOCKET'S PLAYER WAS DELETED WHILE SOCKET WAS CONNECTED ${playerName}[${roomName}]`)
 				}
 			} else {
 				// phantom disconnection
-				log(`?? ${playerName}[${roomName}]`)
+				// the room would have to be deleted while the socket was still connected
+				log(`??? SOCKET'S ROOM WAS DELETED WHILE SOCKET WAS CONNECTED ${playerName}[${roomName}]`)
 			}
         } else {
 			// phantom disconnection
-			// can happen if name taken
+			// socket was connected, but never managed to join a room
+			// can happen if visited game page but name was taken, so was returned to home page
 			log(`???`)
         }
 		log(JSON.stringify(rooms))
+	})
+	
+	socket.on('next state', (data) => {
+		log(roomName)
+		log('next state')
 	})
 })
 

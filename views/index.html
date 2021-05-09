@@ -8,18 +8,17 @@
 	<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;400;700&display=swap" rel="stylesheet">
 	<title>Dan's Draw!</title>
 </head>
-<body class='green'>
+<body class='grey'>
 	<div class='box white'>
-		<h1 class='box green'>Welcome to Dan's Draw!</h1>
+		<h1 class='box blue'>Welcome to Dan's Draw!</h1>
 		<div class='box red hidden' id='error'></div>
 		<br>
 		<div>Your name! Make it unique to the room.</div>
 		<input id='name-input' class='box white' type="text" maxlength="10" placeholder="Name">
 		<br>
-		<br>
 		<div>The room name. Type in something new to start a new room!</div>
 		<input id='room-input' class='box white' type="text" maxlength="10" placeholder="Room">
-		<button id='go' class='box blue button'>GO GO GO!</button>
+		<button id='go' class='box green button' onclick="window.location.href = `/game/${roomInput.value}/${nameInput.value}`">GO GO GO!</button>
 	</div>
 	<script>
 let errorBox = document.getElementById('error')
@@ -36,6 +35,8 @@ setError(new URL(window.location.href).searchParams.get('err'))
 
 let checkTimeoutId;
 let checkTimeoutDelay = 1000;
+const goButton = document.getElementById('go')
+goButton.disabled = true
 function checkNameAndRoomWithServer() {
 	fetch('/join/' + roomInput.value)
 		.then(res => res.json())
@@ -73,14 +74,13 @@ function updatedInput(input) {
 document.body.addEventListener('keydown', (event) => {
 	if (event.code === 'Enter') {
 		goButton.click()
+		event.preventDefault()
 	}
 })
 
-const goButton = document.getElementById('go')
-goButton.disabled = true
-goButton.addEventListener('click', (event) => {
-	window.location.href = `/game/${roomInput.value}/${nameInput.value}`
-})
+// goButton.addEventListener('click', (event) => {
+	// window.location.href = `/game/${roomInput.value}/${nameInput.value}`
+// })
 	</script>
 </body>
 </html>

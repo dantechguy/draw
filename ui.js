@@ -15,7 +15,10 @@ function generateUI(roomName, playerName) {
     switch (room.state) {
         case 'lobby':
             return fileData['lobby']
-        case 
+                .replace('{{roomName}}', roomName)
+                .replace('{{playerList}}', `<li>${room.getPlayerNames().join('</li><li>')}</li>`)
+        default:
+            return '<button class="box blue button">hi</button>'
     }
 }
 

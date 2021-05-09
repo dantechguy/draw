@@ -1,9 +1,9 @@
 <h1 class='box green'>Game Start!!</h1>
 <div>Enter your prompt! Be creative, weird, or don't.</div>
-<input id='' class='box white' type="text" placeholder='Prompt'>
+<input id='prompt' class='box white' type="text" placeholder='Prompt'>
 <button class='box button blue' id='submit'>I'm done!</button>
 <script>
 document.getElementById('submit').addEventListener('click', (event) => {
-    socket.emit('next stage')
+    socket.emit('upload prompt', document.getElementById('prompt').value)
 })
 </script>
