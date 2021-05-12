@@ -66,6 +66,8 @@ class Room {
 	
 	deletePlayerWith(playerName) {
 		delete this.players[playerName]
+		if (this.admin === playerName)
+			this.assignAdmin();
 	}
 	
 	getPlayerNames() {
@@ -81,18 +83,28 @@ class Room {
 		return total
 	}
 	
-	hasConnectionPlayers() {
+	hasConnectedPlayers() {
 		return this.getConnectedPlayerCount() !== 0
 	}
 	
+	assignPlayerLoop() {
+		let playerNames = this.getPlayerNames()
+		let previousPlayerName = playerNames[playerNames.length-1]
+		playerNames.forEach(playerName => {
+			let player = this.getPlayerWith(playerName)
+			player.previousPlayer = previousPlayerName
+			previousPlayerName = playerName
+		})
+	}
+	
 	assignAdmin() {
-		if (this.hasConnectionPlayers()) {
+		if (this.hasConnectedPlayers()) {
 			this.admin = this.getPlayerNames()[0]
 			let adminPlayer = this.getPlayerWith(this.admin)
 			io.to(adminPlayer.id).emit('admin')
 		} else {
 			this.admin = undefined
-		}
+			}
 	}
 	
 	adminIs(playerName) {
@@ -100,6 +112,8 @@ class Room {
 	}
 	
 	goToNextState() {
+		if (this.state === 'lobby')
+			this.assignPlayerLoop();
 		this.state = {
 			lobby: 'prompt',
 			prompt: 'draw',
@@ -120,14 +134,7 @@ class Player {
 		this.name = name
 		this.isConnected = true
 		this.isReady = true
-	}
-	
-	get isDisconnected() {
-		return !this.isConnected
-	}
-	
-	set isDisconnected(value) {
-		this.isConnected = !value
+		this.previousPlayer;
 	}
 }
 
