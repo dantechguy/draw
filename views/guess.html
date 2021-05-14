@@ -3,5 +3,5 @@
 <div class='box'>
     <img src="{{previousDrawing}}" alt="A doodle">
 </div>
-<input id='prompt' class='box white' type="text" placeholder='Guess'>
-<button class='box button green' id='submit'>I'm done!</button>
+<input id='prompt' class='box white' type="text" placeholder='Guess' autocomplete="off">
+<button class='box button green' id='submit' onclick="socket.emit('upload prompt', document.getElementById('prompt').value)">I'm done!</button>

@@ -92,7 +92,7 @@ class Room {
 		let previousPlayerName = playerNames[playerNames.length-1]
 		playerNames.forEach(playerName => {
 			let player = this.getPlayerWith(playerName)
-			player.previousPlayer = previousPlayerName
+			player.previousPlayerName = previousPlayerName
 			previousPlayerName = playerName
 		})
 	}
@@ -114,6 +114,7 @@ class Room {
 	goToNextState() {
 		if (this.state === 'lobby')
 			this.assignPlayerLoop();
+			
 		this.state = {
 			lobby: 'prompt',
 			prompt: 'draw',
@@ -121,6 +122,10 @@ class Room {
 			guess: 'draw',
 			finished: 'finished'
 		}[this.state]
+		
+		this.getPlayerNames()
+				.forEach(playerName => {
+					this.getPlayerWith(playerName).isReady = false })
 	}
 	
 	finishGame() {
@@ -134,7 +139,18 @@ class Player {
 		this.name = name
 		this.isConnected = true
 		this.isReady = true
-		this.previousPlayer;
+		this.previousPlayerName;
+		
+		this.prompts = []
+		this.drawings = []
+	}
+	
+	getLatestDrawing() {
+		return this.drawings[this.drawings.length-1]
+	}
+	
+	getLatestPrompt() {
+		return this.prompts[this.prompts.length-1]
 	}
 }
 

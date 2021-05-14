@@ -1,7 +1,62 @@
 <h1 class='box green'>Get drawing!</h1>
 <div>Someone wrote this. Draw it!</div>
 <div class='box'>{{previousPrompt}}</div>
-<div class='box'>
-    <canvas></canvas>
-</div>
-<button class='box button green' id='submit'>I'm done!</button>
+<canvas class='box no-padding' width="500" height="1000" id='drawing-canvas'></canvas>
+<button class='box button green' onclick="socket.emit('upload drawing', canvas.toDataURL('image/png'))">I'm done!</button>
+<script>
+var canvas = document.getElementById('drawing-canvas')
+var ctx = canvas.getContext('2d')
+canvas.width = 200
+canvas.height = 300
+ctx.strokeStyle = '#000'
+ctx.lineWidth = 10
+ctx.lineCap = 'round'
+var penIsDown = false
+var prevPt
+
+canvas.addEventListener('touchstart',   handlePenDown)
+canvas.addEventListener('mousedown',    handlePenDown)
+canvas.addEventListener('touchend',     handlePenUp)
+canvas.addEventListener('touchcancel',  handlePenUp)
+canvas.addEventListener('mouseup',      handlePenUp)
+canvas.addEventListener('mouseleave',      handlePenUp)
+canvas.addEventListener('touchmove',    handlePenMove)
+canvas.addEventListener('mousemove',    handlePenMove)
+
+function handlePenDown(e) {
+    e.preventDefault()
+    penIsDown = true
+    pt = getPenCoordinates(e)
+    ctx.beginPath()
+    ctx.arc(pt.x, pt.y, ctx.lineWidth/2, 0, 2*Math.PI)
+    ctx.fill()
+    
+    prevPt = pt
+}
+
+function handlePenMove(e) {
+    if (penIsDown) {
+        e.preventDefault()
+        pt = getPenCoordinates(e)
+        ctx.beginPath()
+        ctx.moveTo(prevPt.x, prevPt.y)
+        ctx.lineTo(pt.x, pt.y)
+        ctx.stroke()
+        prevPt = pt
+    }
+}
+
+function handlePenUp(e) {
+    handlePenMove(e)
+    e.preventDefault()
+    penIsDown = false
+}
+
+function getPenCoordinates(event) {
+    let point = event.touches ? event.touches[0] : event; // could use event.offsetX, but easier to support mouse & touch in one
+    return {
+        x: ((point.pageX - canvas.offsetLeft) / canvas.clientWidth) * canvas.width,
+        y: ((point.pageY - canvas.offsetTop) / canvas.clientHeight) * canvas.height,
+    }
+}
+</script>

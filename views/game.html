@@ -15,15 +15,27 @@
 const socket = io()
 const [ roomName, playerName ] = window.location.pathname.split('/').slice(2,4)
 const uiElement = document.getElementById('ui')
-let amAdmin = false
+let isAdmin = false
+
+// replaces el.innerHTML. will execute script tags
+var setInnerHTML = function(elm, html) {
+  elm.innerHTML = html;
+  Array.from(elm.querySelectorAll("script")).forEach( oldScript => {
+    const newScript = document.createElement("script");
+    Array.from(oldScript.attributes)
+      .forEach( attr => newScript.setAttribute(attr.name, attr.value) );
+    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+    oldScript.parentNode.replaceChild(newScript, oldScript);
+  });
+}
 
 socket.emit('join', { roomName, playerName })
 
-socket.on('update ui', (data) => uiElement.innerHTML=data )
+socket.on('update ui', (data) => setInnerHTML(uiElement, data) )
 
 socket.on('failed to join room', (data) => window.location.href='/?err='+data )
 
-socket.on('admin', (data) => amAdmin=true)
+socket.on('admin', (data) => isAdmin=true)
     </script>
 </body>
 </html>

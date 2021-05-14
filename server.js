@@ -134,7 +134,6 @@ io.on('connection', (socket) => {
 		} else {
 			failedToJoinRoom('Socket has already successfully joined')
 		}
-		log(JSON.stringify(rooms.rooms, null, '  '))
 	})
 	
 	function roomAndPlayerExistAndDisconnectIfNot() {
@@ -202,20 +201,51 @@ io.on('connection', (socket) => {
 			}
 			deleteRoomIfEmpty()
 		}
-		log(JSON.stringify(rooms.rooms, null, '  '))
 	})
 	
 	socket.on('next state', (data) => {
-		if (roomAndPlayerExistAndDisconnectIfNot) {
+		if (roomAndPlayerExistAndDisconnectIfNot()) {
 			let room = rooms.getRoomWith(roomName)
 			let playerIsAdmin = room.adminIs(playerName)
 			
 			if (playerIsAdmin) {
 				room.goToNextState()
+				updateUIForAllPlayersIn(roomName)
+				log(`> ${roomName}`)
 			}
 		}
-		updateUIForAllPlayersIn(roomName)
-		log(JSON.stringify(rooms.rooms, null, '  '))
+	})
+	
+	socket.on('upload drawing', (data) => {
+		if (roomAndPlayerExistAndDisconnectIfNot()) {
+			let room = rooms.getRoomWith(roomName)
+			let player = room.getPlayerWith(playerName)
+			let roomInDrawState = room.state === 'draw'
+			let playerNotReady = !player.isReady
+			
+			if (roomInDrawState && playerNotReady) {
+				player.drawings.push(data) // validate data?
+				player.isReady = true
+				updateUIForAllReadyPlayersIn(roomName)
+				log(`^ ${playerName}[${roomName}]`)
+			}
+		}
+	})
+	
+	socket.on('upload prompt', (data) => {
+		if (roomAndPlayerExistAndDisconnectIfNot()) {
+			let room = rooms.getRoomWith(roomName)
+			let player = room.getPlayerWith(playerName)
+			let roomInPromptState = room.state === 'prompt' || room.state === 'guess'
+			let playerNotReady = !player.isReady
+			
+			if (roomInPromptState && playerNotReady) {
+				player.prompts.push(data)
+				player.isReady = true
+				updateUIForAllReadyPlayersIn(roomName)
+				log(`^ ${playerName}[${roomName}] "${data}"`)
+			}
+		}
 	})
 })
 

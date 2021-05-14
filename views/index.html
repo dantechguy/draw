@@ -14,10 +14,10 @@
 		<div class='box red hidden' id='error'></div>
 		<br>
 		<div>Your name! Make it unique to the room.</div>
-		<input id='name-input' class='box white' type="text" maxlength="10" placeholder="Name">
+		<input id='name-input' class='box white' type="text" maxlength="10" placeholder="Name" autocomplete="off">
 		<br>
 		<div>The room name. Type in something new to start a new room!</div>
-		<input id='room-input' class='box white' type="text" maxlength="10" placeholder="Room">
+		<input id='room-input' class='box white' type="text" maxlength="10" placeholder="Room" autocomplete="off">
 		<button id='go' class='box green button' onclick="window.location.href = `/game/${roomInput.value}/${nameInput.value}`">GO GO GO!</button>
 	</div>
 	<script>

@@ -1,4 +1,5 @@
-const { rooms, idLookup } = require('./dataJS.js')
+const { log } = require('./log.js')
+const { rooms } = require('./dataJS.js')
 const fs = require('fs')
 let { io } = require('./server.js')
 
@@ -9,17 +10,14 @@ const fileData = {
     'draw': fs.readFileSync("./views/draw.html").toString(),
     'guess': fs.readFileSync("./views/guess.html").toString(),
     'finished': fs.readFileSync("./views/finished.html").toString(),
-}
-
-const stateFunctions = {
-    'lobby': generateLobbyUI,
-    'prompt': generatePromptUI,
-    'draw': generateDrawUI,
-    'guess': generateGuessUI,
-    'finished': generateFinishedUI
+    'wait': fs.readFileSync("./views/wait.html").toString(),
+    'waitready': fs.readFileSync("./views/waitready.html").toString(),
+    'waitfinish': fs.readFileSync("./views/waitfinish.html").toString(),
+    'waitfinishready': fs.readFileSync("./views/waitfinishready.html").toString(),
 }
 
 function updateUIForAllPlayersIn(roomName) {
+    log('udpate all players')
     rooms.getRoomWith(roomName)
         .getPlayerNames()
         .forEach(playerName => {
@@ -28,8 +26,9 @@ function updateUIForAllPlayersIn(roomName) {
 }
 
 function updateUIForAllReadyPlayersIn(roomName) {
-    rooms.getRoomWith(roomName)
-        .getPlayerNames()
+    log('update ready players')
+    let room = rooms.getRoomWith(roomName)
+    room.getPlayerNames()
         .filter(playerName => room.getPlayerWith(playerName).isReady)
         .forEach(playerName => {
             updateUIForPlayer(roomName, playerName)
@@ -39,41 +38,49 @@ function updateUIForAllReadyPlayersIn(roomName) {
 function updateUIForPlayer(roomName, playerName) {
     let room = rooms.getRoomWith(roomName)
     let player = room.getPlayerWith(playerName)
-    let ui = stateFunctions[room.state](roomName, playerName)
+    let ui = generateUI(roomName, playerName)
     io.to(player.id).emit('update ui', ui)
 }
 
-function generateLobbyUI(roomName, playerName) {
-    let room = rooms.getRoomWith(roomName)
-    return fileData['lobby']
+function generateUI(roomName, playerName) {
+    let room = rooms.getRoomWith(roomName),
+        notReadyPlayerNames = room.getPlayerNames().filter(playerName => !room.getPlayerWith(playerName).isReady),
+        allPlayersReady = notReadyPlayerNames.length === 0,
+        player = room.getPlayerWith(playerName),
+        readyState = !player.isReady ? 'not ready' : (allPlayersReady ? 'all ready' : 'ready')
+    
+    let page = {
+        'lobby': {  'not ready':    'lobby',
+                    'ready':        'lobby',
+                    'all ready':    'lobby', },
+        'prompt': { 'not ready':    'prompt',
+                    'ready':        'wait',
+                    'all ready':    'waitready', },
+        'draw': {   'not ready':    'draw',
+                    'ready':        'waitfinish',
+                    'all ready':    'waitfinishready', },
+        'guess': {  'not ready':    'guess',
+                    'ready':        'wait',
+                    'all ready':    'waitready', },
+        'finish': { 'not ready':    'finish',
+                    'ready':        'finish',
+                    'all ready':    'finish', }
+    }
+    let ui = fileData[page[room.state][readyState]]
         .replace('{{roomName}}', roomName)
         .replace('{{playerList}}', `<li>${room.getPlayerNames().join('</li><li>')}</li>`)
-}
-
-function generatePromptUI(roomName, playerName) {
-    return fileData['prompt']
-}
-
-function generateDrawUI(roomName, playerName) {
-    let room = rooms.getRoomWith(roomName)
-    let player = room.getPlayerWith(playerName)
-    let previousPlayer = room.getPlayerWith(player.previousPlayer)
-    let previousPrompt = previousPlayer.getLatestPrompt()
-    return fileData['draw']
-        .replace('{{previousPrompt}}', previousPrompt)
-}
-
-function generateGuessUI(roomName, playerName) {
-    let room = rooms.getRoomWith(roomName)
-    let player = room.getPlayerWith(playerName)
-    let previousPlayer = room.getPlayerWith(player.previousPlayer)
-    let previousDrawing = previousPlayer.getLatestDrawing()
-    return fileData['guess']
-        .replace('{{previousDrawing}}', previousDrawing)
-}
-
-function generateFinishedUI(roomName, playerName) {
-    return fileData['finished']
+        .replace('{{notReadyPlayerList}}', `<li>${notReadyPlayerNames.join('</li><li>')}</li>`)
+        
+    if (room.state === 'guess') {
+        let previousPlayer = room.getPlayerWith(player.previousPlayerName)
+        ui = ui.replace('{{previousDrawing}}', previousPlayer.getLatestDrawing())
+    }
+    if (room.state === 'draw') {
+        let previousPlayer = room.getPlayerWith(player.previousPlayerName)
+        ui = ui.replace('{{previousPrompt}}', previousPlayer.getLatestPrompt())
+    }
+    log(`update player ${playerName}: ${notReadyPlayerNames}: ${readyState}: ${room.state}`)
+    return ui
 }
 
 module.exports = { updateUIForAllPlayersIn, updateUIForAllReadyPlayersIn, updateUIForPlayer }

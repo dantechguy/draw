@@ -1,5 +1,5 @@
 <h1 class='box blue'>{{roomName}} lobby</h1>
-<button class='box button green admin' id='start' onclick="socket.emit('next state')">Start</button>
-<a class='box button red' id='exit' href='/'>Leave</a>
+<button class='box button green admin' onclick="socket.emit('next state')">Start</button>
+<a class='box button red' href='/'>Leave</a>
 <div>Players:</div>
 <ul class='box'>{{playerList}}</ul>

@@ -1,10 +1,4 @@
 <h1 class='box green'>Game Start!!</h1>
 <div>Enter your prompt! Be creative, weird, or don't.</div>
-<input id='prompt' class='box white' type="text" placeholder='Prompt'>
-<button class='box button green' id='submit'>I'm done!</button>
-<!-- this won't run. run an extra function on 'update ui' -->
-<script>
-document.getElementById('submit').addEventListener('click', (event) => {
-    socket.emit('upload prompt', document.getElementById('prompt').value)
-})
-</script>
+<input id='prompt' class='box white' type="text" placeholder='Prompt' autocomplete="off">
+<button class='box button green' onclick="socket.emit('upload prompt', document.getElementById('prompt').value)">I'm done!</button>
