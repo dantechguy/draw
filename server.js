@@ -278,7 +278,6 @@ io.on('connection', (socket) => {
 				room.finishGame()
 				updateUIForAllPlayersIn(roomName)
 				log(`$ ${roomName}`)
-				log(JSON.stringify(rooms.rooms))
 			}
 		}
 	})
