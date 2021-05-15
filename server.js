@@ -207,9 +207,11 @@ io.on('connection', (socket) => {
 		if (roomAndPlayerExistAndDisconnectIfNot()) {
 			let room = rooms.getRoomWith(roomName)
 			let playerIsAdmin = room.adminIs(playerName)
-			let playerIsReady = room.getPlayerWith(playerName).isReady // prevents double misclick
+			// makes sure prompt+drawing arrays dont get out of sync by skipping some players
+			// future... force players to send whatever they've got and skip?
+			let allPlayersAreReady = room.getPlayerNames().every(playerName => room.getPlayerWith(playerName).isReady)
 			
-			if (playerIsAdmin && playerIsReady) {
+			if (playerIsAdmin && allPlayersAreReady) {
 				room.goToNextState()
 				updateUIForAllPlayersIn(roomName)
 				log(`> ${roomName}`)
@@ -266,14 +268,33 @@ io.on('connection', (socket) => {
 	socket.on('finish game', (data) => {
 		if (roomAndPlayerExistAndDisconnectIfNot()) {
 			let room = rooms.getRoomWith(roomName)
-			let player = room.getPlayerWith(playerName)
 			let playerIsAdmin = room.adminIs(playerName)
-			let roomInDrawState = room.state === 'draw'
+			let allPlayersAreReady = room.getPlayerNames().every(playerName => room.getPlayerWith(playerName).isReady)
+			let roomInFinishableState = ['prompt', 'draw', 'guess'].includes(room.state)
 			
-			if (playerIsAdmin && roomInDrawState) {
+			if (playerIsAdmin && allPlayersAreReady && roomInFinishableState) {
 				room.finishGame()
 				updateUIForAllPlayersIn(roomName)
 				log(`$ ${roomName}`)
+			}
+		}
+	})
+	
+	socket.on('reveal next', (data) => {
+		if (roomAndPlayerExistAndDisconnectIfNot()) {
+			let room = rooms.getRoomWith(roomName)
+			let playerIsAdmin = room.adminIs(playerName)
+			let roomIsFinished = room.state === 'finish'
+			
+			if (playerIsAdmin && roomIsFinished) {
+				if (!room.atEndOfReviewPlayerChain()) {
+					room.reviewRound++;
+				} else {
+					room.reviewPlayerName = room.getPlayerWith(room.reviewPlayerName).nextPlayerName
+					room.reviewRound = 0
+				}
+				updateUIForAllPlayersIn(roomName)
+				
 			}
 		}
 	})

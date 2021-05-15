@@ -9,9 +9,9 @@ const fileData = {
 	'prompt': fs.readFileSync("./views/prompt.html").toString(),
 	'draw': fs.readFileSync("./views/draw.html").toString(),
 	'guess': fs.readFileSync("./views/guess.html").toString(),
+	'wait': fs.readFileSync("./views/wait.html").toString(),
 	'finish': fs.readFileSync("./views/finish.html").toString(),
-	'waitprompt': fs.readFileSync("./views/waitprompt.html").toString(),
-	'waitdraw': fs.readFileSync("./views/waitdraw.html").toString(),
+	'review': fs.readFileSync("./views/review.html").toString(),
 }
 
 function updateUIForAllPlayersIn(roomName) {
@@ -38,85 +38,49 @@ function updateUIForPlayer(roomName, playerName) {
 	io.to(player.id).emit('update ui', ui)
 }
 
-function generateUI___OLD(roomName, playerName) {
-	let room = rooms.getRoomWith(roomName),
-		notReadyPlayerNames = room.getPlayerNames().filter(playerName => !room.getPlayerWith(playerName).isReady),
-		allPlayersReady = notReadyPlayerNames.length === 0,
-		player = room.getPlayerWith(playerName),
-		readyState = !player.isReady ? 'not ready' : (allPlayersReady ? 'all ready' : 'ready')
-	
-	let page = {
-		'lobby': {  'not ready':    'lobby',
-					'ready':        'lobby',
-					'all ready':    'lobby', },
-		'prompt': { 'not ready':    'prompt',
-					'ready':        'wait',
-					'all ready':    'waitready', },
-		'draw': {   'not ready':    'draw',
-					'ready':        'waitfinish',
-					'all ready':    'waitfinishready', },
-		'guess': {  'not ready':    'guess',
-					'ready':        'wait',
-					'all ready':    'waitready', },
-		'finish': { 'not ready':    'finish',
-					'ready':        'finish',
-					'all ready':    'finish', }
-	}
-	let ui = fileData[page[room.state][readyState]]
-		.replace('{{roomName}}', roomName)
-		.replace('{{playerList}}', `<li>${room.getPlayerNames().join('</li><li>')}</li>`)
-		.replace('{{notReadyPlayerList}}', `<li>${notReadyPlayerNames.join('</li><li>')}</li>`)
-		
-	if (room.state === 'guess') {
-		let previousPlayer = room.getPlayerWith(player.previousPlayerName)
-		ui = ui.replace('{{previousDrawing}}', previousPlayer.getLatestDrawing())
-	}
-	if (room.state === 'draw') {
-		let previousPlayer = room.getPlayerWith(player.previousPlayerName)
-		ui = ui.replace('{{previousPrompt}}', previousPlayer.getLatestPrompt())
-	}
-	return ui
-}
-
-
 function generateUI(roomName, playerName) {
 	let room = rooms.getRoomWith(roomName)
 	let player = room.getPlayerWith(playerName)
+	
 	let roomHasWaitPage = ['prompt', 'draw', 'guess'].includes(room.state)
-	let roomHasPreviousPrompt = ['guess', 'draw'].includes(room.state)
+	let state = (roomHasWaitPage && player.isReady) ? 'wait' : room.state
+	
+	let roomHasPreviousPrompt = ['guess', 'draw'].includes(state)
+	
 	let notReadyPlayerNames = room.getPlayerNames().filter(playerName => !room.getPlayerWith(playerName).isReady)
 	let allPlayersReady = notReadyPlayerNames.length === 0
+	
 	let ui;
+
 	
-	if (roomHasWaitPage && player.isReady) {
-		ui = fileData[ room.state === 'draw'  ? 'waitdraw' : 'waitprompt' ]
-		if (allPlayersReady) {
-			ui = ui
-				.replace('{{nextStateText}}', 'Next round!')
-				.replace('{{finishGameText}}', 'Finish game!')
-				.replace('{{playerListTitle}}', 'All players ready!')
-				.replace('{{notReadyPlayerList}}', '')
-		} else {
-			ui = ui
-				.replace('{{nextStateText}}', 'Skip players and go to next round!')
-				.replace('{{finishGameText}}', 'Skip players and finish game!')
-				.replace('{{playerListTitle}}', 'Waiting for:')
-				.replace('{{notReadyPlayerList}}', `<li>${notReadyPlayerNames.join('</li><li>')}</li>`)
-			
-		}
-		return ui
-	}
-	
-	ui = fileData[room.state]
-		.replace('{{roomName}}', roomName)
-		.replace('{{playerList}}', `<li>${room.getPlayerNames().join('</li><li>')}</li>`)
-		.replace('{{notReadyPlayerList}}', `<li>${notReadyPlayerNames.join('</li><li>')}</li>`)
+	ui = fileData[state]
+		.replace(/{{roomName}}/g, roomName)
+		.replace(/{{playerList}}/g, `<li>${room.getPlayerNames().join('</li><li>')}</li>`)
+		.replace(/{{notReadyPlayerListTitle}}/g, allPlayersReady ? 'All players ready!' : 'Waiting for:')
+		.replace(/{{notReadyPlayerList}}/g, `<li>${notReadyPlayerNames.join('</li><li>')}</li>`)
+		.replace(/{{notAllPlayersReadyHiddenClass}}/g, allPlayersReady ? '' : 'hidden')
+		
 	
 	if (roomHasPreviousPrompt) {
 		let previousPlayer = room.getPlayerWith(player.previousPlayerName)
 		ui = ui
-			.replace('{{previousPrompt}}', previousPlayer.getLatestPrompt())
-			.replace('{{previousDrawing}}', previousPlayer.getLatestDrawing())
+			.replace(/{{previousPrompt}}/g, previousPlayer.getLatestPrompt())
+			.replace(/{{previousDrawing}}/g, previousPlayer.getLatestDrawing())
+	}
+	
+	if (state === 'finish') {
+		let reviewPlayer = room.getPlayerWith(room.reviewPlayerName)
+		ui = ui
+			.replace(/{{playerName}}/g, room.reviewPlayerName)
+			.replace(/{{revealNextText}}/g, room.atEndOfReviewPlayerChain() ? "Next player's chain" : 'Reveal next...')
+			.replace(/{{reviewPromptsAndDrawings}}/g, 
+				reviewPlayer.chain.slice(0, room.reviewRound).reduce((acc, item) => {
+					if (item.type === 'prompts') {
+						return acc += `<li> <div>${item.playerName} wrote:</div> <div class='box'>${item.data}</div> </li> <br>`
+					} else {
+						return acc += `<li> <div>${item.playerName} drew:</div> <img class='box' src="${item.data}"> </li> <br>`
+					}
+				}, ''))
 	}
 	 
 	return ui

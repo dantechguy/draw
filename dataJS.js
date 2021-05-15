@@ -1,4 +1,5 @@
 let { io } = require('./server.js')
+const { log } = require('./log.js')
 
 class Rooms {
 	constructor() {
@@ -50,6 +51,10 @@ class Room {
 		this.name = name
 		this.admin = undefined
 		this.state = 'lobby' // lobby, prompt, wait, draw, wait-finish, guess, finish
+		
+		// only used for `finish`
+		this.reviewPlayerName;
+		this.reviewRound;
 	}
 	
 	getPlayerWith(playerName) {
@@ -89,12 +94,12 @@ class Room {
 	
 	assignPlayerLoop() {
 		let playerNames = this.getPlayerNames()
-		let previousPlayerName = playerNames[playerNames.length-1]
-		playerNames.forEach(playerName => {
-			let player = this.getPlayerWith(playerName)
-			player.previousPlayerName = previousPlayerName
-			previousPlayerName = playerName
-		})
+		
+		for (let i=0; i<playerNames.length; i++) {
+			let player = this.getPlayerWith(playerNames[i])
+			player.previousPlayerName = playerNames[mod(i-1, playerNames.length)]
+			player.nextPlayerName = playerNames[mod(i+1, playerNames.length)]
+		}
 	}
 	
 	assignAdmin() {
@@ -130,6 +135,32 @@ class Room {
 	
 	finishGame() {
 		this.state = 'finish'
+		this.reviewPlayerName = this.admin
+		this.reviewRound = 0
+		this.createPlayerChains()
+	}
+	
+	createPlayerChains() {
+		this.getPlayerNames()
+			.map(playerName => this.getPlayerWith(playerName))
+			.forEach(player => {
+				let round = 0, chain = player.chain
+				while (1) {
+					let type = (round % 2 === 0) ? 'prompts' : 'drawings'
+					if (typeof player[type][round] === 'undefined') break;
+					chain.push({
+						type: type,
+						data: player[type][round],
+						playerName: player.name,
+					})
+					player = this.getPlayerWith(player.nextPlayerName)
+					round++
+				}
+			})
+	}
+	
+	atEndOfReviewPlayerChain() {
+		return this.reviewRound >= this.getPlayerWith(this.reviewPlayerName).chain.length
 	}
 }
 
@@ -140,9 +171,12 @@ class Player {
 		this.isConnected = true
 		this.isReady = true
 		this.previousPlayerName;
+		this.nextPlayerName;
 		
 		this.prompts = []
 		this.drawings = []
+		
+		this.chain = []
 	}
 	
 	getLatestDrawing() {
@@ -152,6 +186,10 @@ class Player {
 	getLatestPrompt() {
 		return this.prompts[this.prompts.length-1]
 	}
+}
+
+function mod(n, m) {
+	return ((n % m) + m) % m;
 }
 
 const rooms = new Rooms()

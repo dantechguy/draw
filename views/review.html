@@ -1,15 +1,11 @@
 <h1>
-    Game over! Time to review:
+    {{playerName}}'s drawing chain!
 </h1>
 
-<h3>
-    {{playerName}}'s drawing chain!
-</h3>
-
-<ul>
+<ul class='box'>
     {{reviewPromptsAndDrawings}}
 </ul>
 
 <button class='box button green admin' onclick="socket.emit('reveal next')">
-    {{revealNextText}}
+    Reveal next...
 </button>
