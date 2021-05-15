@@ -228,6 +228,7 @@ io.on('connection', (socket) => {
 			
 			if (roomInDrawState && playerNotReady) {
 				player.drawings.push(data) // validate data?
+				player.prompts.push('') // used to even out the prompt/drawing arrays for later chain creation
 				player.isReady = true
 				updateUIForAllReadyPlayersIn(roomName)
 				log(`^ ${playerName}[${roomName}]`)
@@ -258,6 +259,7 @@ io.on('connection', (socket) => {
 			if (roomInPromptState && playerNotReady) {
 				data = sanitise(data)
 				player.prompts.push(data)
+				player.drawings.push('') // used to even out the prompt/drawing arrays for later chain creation
 				player.isReady = true
 				updateUIForAllReadyPlayersIn(roomName)
 				log(`^ ${playerName}[${roomName}] "${data}"`)
@@ -276,6 +278,7 @@ io.on('connection', (socket) => {
 				room.finishGame()
 				updateUIForAllPlayersIn(roomName)
 				log(`$ ${roomName}`)
+				log(JSON.stringify(rooms.rooms))
 			}
 		}
 	})
