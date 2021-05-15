@@ -120,7 +120,7 @@ class Room {
 			prompt: 'draw',
 			draw: 'guess',
 			guess: 'draw',
-			finished: 'finished'
+			finish: 'finish'
 		}[this.state]
 		
 		this.getPlayerNames()
@@ -129,7 +129,7 @@ class Room {
 	}
 	
 	finishGame() {
-		this.state = 'finished'
+		this.state = 'finish'
 	}
 }
 

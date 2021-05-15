@@ -161,9 +161,9 @@ io.on('connection', (socket) => {
 			} else {
 				phantomDisconnection(`- ${playerName}[${roomName}] had its room deleted while connected`)
 			}
-        } else {
+		} else {
 			phantomDisconnection('- roomless socket')
-        }
+		}
 		socket.disconnect(true)
 		return false
 	}
@@ -207,8 +207,9 @@ io.on('connection', (socket) => {
 		if (roomAndPlayerExistAndDisconnectIfNot()) {
 			let room = rooms.getRoomWith(roomName)
 			let playerIsAdmin = room.adminIs(playerName)
+			let playerIsReady = room.getPlayerWith(playerName).isReady // prevents double misclick
 			
-			if (playerIsAdmin) {
+			if (playerIsAdmin && playerIsReady) {
 				room.goToNextState()
 				updateUIForAllPlayersIn(roomName)
 				log(`> ${roomName}`)
@@ -239,11 +240,40 @@ io.on('connection', (socket) => {
 			let roomInPromptState = room.state === 'prompt' || room.state === 'guess'
 			let playerNotReady = !player.isReady
 			
+			function sanitise(string) {
+				const map = {
+					'&': '&amp;',
+					'<': '&lt;',
+					'>': '&gt;',
+					'"': '&quot;',
+					"'": '&#x27;',
+					"/": '&#x2F;',
+				};
+				const reg = /[&<>"'/]/ig;
+				return string.replace(reg, (match)=>(map[match]));
+			  }
+			
 			if (roomInPromptState && playerNotReady) {
+				data = sanitise(data)
 				player.prompts.push(data)
 				player.isReady = true
 				updateUIForAllReadyPlayersIn(roomName)
 				log(`^ ${playerName}[${roomName}] "${data}"`)
+			}
+		}
+	})
+	
+	socket.on('finish game', (data) => {
+		if (roomAndPlayerExistAndDisconnectIfNot()) {
+			let room = rooms.getRoomWith(roomName)
+			let player = room.getPlayerWith(playerName)
+			let playerIsAdmin = room.adminIs(playerName)
+			let roomInDrawState = room.state === 'draw'
+			
+			if (playerIsAdmin && roomInDrawState) {
+				room.finishGame()
+				updateUIForAllPlayersIn(roomName)
+				log(`$ ${roomName}`)
 			}
 		}
 	})

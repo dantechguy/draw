@@ -15,7 +15,6 @@
 const socket = io()
 const [ roomName, playerName ] = window.location.pathname.split('/').slice(2,4)
 const uiElement = document.getElementById('ui')
-let isAdmin = false
 
 // replaces el.innerHTML. will execute script tags
 var setInnerHTML = function(elm, html) {
@@ -35,7 +34,7 @@ socket.on('update ui', (data) => setInnerHTML(uiElement, data) )
 
 socket.on('failed to join room', (data) => window.location.href='/?err='+data )
 
-socket.on('admin', (data) => isAdmin=true)
+socket.on('admin', (data) => document.body.style.setProperty('--admin-display', 'initial'))
     </script>
 </body>
 </html>

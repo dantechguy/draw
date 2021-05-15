@@ -4,6 +4,11 @@ body {
 	font-family: 'Montserrat', sans-serif;
 	font-size: 20px;
 	--button-shadow: black;
+	--admin-display: none;
+}
+
+.admin {
+	display: var(--admin-display) !important;
 }
 
 .box {
